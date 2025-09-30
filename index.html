@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信息卡片生成器</title>
+    <style>
+        /* CSS 变量定义，方便调整主题色 */
+        :root {
+            --color-primary-start: #6366f1; /* 靛蓝色 */
+            --color-primary-end: #a855f7;   /* 紫色 */
+            --color-accent: #f97316;        /* 亮橙色作为按钮强调色 */
+            --color-success: #10b981;       /* 绿色 */
+            --color-danger: #ef4444;        /* 红色 */
+            --color-text-dark: #1f2937;
+            --color-text-light: #4b5563;
+            --color-bg-light: #f3f4f6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+            background-color: var(--color-bg-light);
+            margin: 0;
+            padding: 20px 0;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px; /* 适配手机屏幕的合理最大宽度 */
+            width: 90%;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        /* 视图切换按钮 */
+        .view-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--color-text-light);
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            background: linear-gradient(135deg, var(--color-primary-start), var(--color-primary-end));
+            color: white;
+            box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+        }
+
+        /* 设置面板样式 */
+        .settings-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: var(--color-text-dark);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--color-primary-start);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-primary-start), var(--color-primary-end));
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--color-success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--color-danger);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 头部和标题样式 */
+        .header {
+            text-align: center;
+            padding: 24px 0 16px;
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--color-primary-start), var(--color-primary-end));
+            color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .main-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .date {
+            font-size: 1rem;
+            font-weight: 300;
+            opacity: 0.9;
+            margin-top: 8px;
+        }
+
+        /* 资讯卡片样式 */
+        .news-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            transition: transform 0.3s ease-in-out;
+            border-left: 6px solid var(--color-primary-start); /* 左侧强调色 */
+            overflow: hidden;
+            position: relative;
+        }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .news-card .card-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .news-card:hover .card-actions {
+            opacity: 1;
+        }
+
+        .card-action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .edit-btn {
+            background: var(--color-accent);
+            color: white;
+        }
+
+        .delete-btn {
+            background: var(--color-danger);
+            color: white;
+        }
+
+        /* 小图标/占位符 */
+        .icon-placeholder {
+            float: right;
+            font-size: 2rem;
+            color: var(--color-primary-end);
+            margin-left: 15px;
+            line-height: 1;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--color-text-dark);
+            margin-top: 0;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .summary {
+            font-size: 0.95rem;
+            color: var(--color-text-light);
+            margin-bottom: 15px;
+        }
+
+        .metadata {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px dashed #e5e7eb;
+        }
+
+        .source-tag {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-primary-start);
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        .detail-button {
+            display: inline-block;
+            background-color: var(--color-accent);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 9999px; /* 药丸形状 */
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 2px 4px rgba(249, 115, 22, 0.4);
+        }
+
+        .detail-button:hover {
+            background-color: #ea580c;
+        }
+
+        /* 隐藏类 */
+        .hidden {
+            display: none !important;
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 640px) {
+            body {
+                padding: 10px 0;
+            }
+            .container {
+                width: 95%;
+            }
+            .main-title {
+                font-size: 1.8rem;
+            }
+            .header {
+                padding: 20px 15px 12px;
+            }
+            .icon-placeholder {
+                font-size: 1.5rem;
+            }
+            .button-group {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 视图切换按钮 -->
+        <div class="view-toggle">
+            <button class="toggle-btn active" onclick="switchView('preview')">预览模式</button>
+            <button class="toggle-btn" onclick="switchView('settings')">设置模式</button>
+        </div>
+
+        <!-- 设置面板 -->
+        <div id="settingsPanel" class="settings-panel hidden">
+            <h2 style="margin-top: 0; color: var(--color-text-dark);">信息卡片设置</h2>
+            
+            <!-- 基本信息设置 -->
+            <div class="form-group">
+                <label class="form-label" for="mainTitle">主标题</label>
+                <input type="text" id="mainTitle" class="form-input" placeholder="输入主标题" value="🚀 AI 每日简报">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="dateInfo">日期信息</label>
+                <input type="text" id="dateInfo" class="form-input" placeholder="输入日期信息" value="🗓️ 2025年9月30日 | 星期二">
+            </div>
+
+            <!-- 卡片设置 -->
+            <div class="form-group">
+                <label class="form-label">信息卡片</label>
+                <div id="cardList">
+                    <!-- 动态生成的卡片设置项 -->
+                </div>
+                <button class="btn btn-success" onclick="addNewCard()" style="margin-top: 10px;">+ 添加新卡片</button>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+                <button class="btn btn-secondary" onclick="loadDefaultSettings()">恢复默认</button>
+                <button class="btn btn-secondary" onclick="exportSettings()">导出设置</button>
+                <button class="btn btn-secondary" onclick="importSettings()">导入设置</button>
+            </div>
+        </div>
+
+        <!-- 预览面板 -->
+        <div id="previewPanel">
+            <!-- 简报头部：大标题和日期 -->
+            <header class="header">
+                <h1 class="main-title" id="previewTitle">🚀 AI 每日简报</h1>
+                <p class="date" id="previewDate">🗓️ 2025年9月30日 | 星期二</p>
+            </header>
+
+            <!-- 动态生成的卡片容器 -->
+            <div id="cardsContainer">
+                <!-- 卡片将通过JavaScript动态生成 -->
+            </div>
+
+            <footer style="text-align: center; margin-top: 30px; font-size: 0.8rem; color: #9ca3af;">
+                <p>点击"查看详情"了解更多 | 关注我们获取每日AI资讯</p>
+            </footer>
+        </div>
+
+    </div>
+
+    <script>
+        // 全局变量
+        let currentView = 'preview';
+        let cards = [];
+        let editingCardIndex = -1;
+
+        // 图标选项
+        const iconOptions = [
+            '🧠', '🤖', '⚖️', '🎨', '💡', '🔬', '📱', '💻', '🌐', '🚀',
+            '📊', '🔧', '🎯', '⭐', '🔥', '💎', '🌟', '🎪', '🎭', '🎵'
+        ];
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+            renderCards();
+        });
+
+        // 切换视图
+        function switchView(view) {
+            currentView = view;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 显示/隐藏面板
+            if (view === 'settings') {
+                document.getElementById('settingsPanel').classList.remove('hidden');
+                document.getElementById('previewPanel').classList.add('hidden');
+            } else {
+                document.getElementById('settingsPanel').classList.add('hidden');
+                document.getElementById('previewPanel').classList.remove('hidden');
+            }
+        }
+
+        // 添加新卡片
+        function addNewCard() {
+            const newCard = {
+                id: Date.now(),
+                icon: '🧠',
+                title: '新卡片标题',
+                summary: '请输入卡片内容描述...',
+                source: '来源标签',
+                link: '#'
+            };
+            
+            cards.push(newCard);
+            renderCardSettings();
+        }
+
+        // 渲染卡片设置界面
+        function renderCardSettings() {
+            const cardList = document.getElementById('cardList');
+            cardList.innerHTML = '';
+            
+            cards.forEach((card, index) => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'form-group';
+                cardDiv.style.border = '1px solid #e5e7eb';
+                cardDiv.style.padding = '15px';
+                cardDiv.style.borderRadius = '8px';
+                cardDiv.style.marginBottom = '15px';
+                
+                cardDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: var(--color-text-dark);">卡片 ${index + 1}</h4>
+                        <button class="btn btn-danger" onclick="deleteCard(${index})" style="padding: 6px 12px; font-size: 12px;">删除</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">图标</label>
+                        <select class="form-select" onchange="updateCard(${index}, 'icon', this.value)">
+                            ${iconOptions.map(icon => 
+                                `<option value="${icon}" ${card.icon === icon ? 'selected' : ''}>${icon}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">标题</label>
+                        <input type="text" class="form-input" value="${card.title}" 
+                               onchange="updateCard(${index}, 'title', this.value)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">内容描述</label>
+                        <textarea class="form-input form-textarea" 
+                                  onchange="updateCard(${index}, 'summary', this.value)">${card.summary}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">来源标签</label>
+                        <input type="text" class="form-input" value="${card.source}" 
+                               onchange="updateCard(${index}, 'source', this.value)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">详情链接</label>
+                        <input type="text" class="form-input" value="${card.link}" 
+                               onchange="updateCard(${index}, 'link', this.value)" placeholder="输入链接地址">
+                    </div>
+                `;
+                
+                cardList.appendChild(cardDiv);
+            });
+        }
+
+        // 更新卡片数据
+        function updateCard(index, field, value) {
+            if (cards[index]) {
+                cards[index][field] = value;
+                renderCards(); // 实时更新预览
+            }
+        }
+
+        // 删除卡片
+        function deleteCard(index) {
+            if (confirm('确定要删除这张卡片吗？')) {
+                cards.splice(index, 1);
+                renderCardSettings();
+                renderCards();
+            }
+        }
+
+        // 渲染预览卡片
+        function renderCards() {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '';
+            
+            cards.forEach((card, index) => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'news-card';
+                cardDiv.innerHTML = `
+                    <div class="card-actions">
+                        <button class="card-action-btn edit-btn" onclick="editCard(${index})" title="编辑">✏️</button>
+                        <button class="card-action-btn delete-btn" onclick="deleteCard(${index})" title="删除">🗑️</button>
+                    </div>
+                    <span class="icon-placeholder" role="img" aria-label="Icon">${card.icon}</span>
+                    <h2 class="card-title">${card.title}</h2>
+                    <p class="summary">${card.summary}</p>
+                    <div class="metadata">
+                        <span class="source-tag">${card.source}</span>
+                        <a href="${card.link}" class="detail-button">查看详情</a>
+                    </div>
+                `;
+                container.appendChild(cardDiv);
+            });
+        }
+
+        // 编辑卡片（切换到设置模式并定位到对应卡片）
+        function editCard(index) {
+            switchView('settings');
+            // 滚动到对应卡片设置
+            setTimeout(() => {
+                const cardElements = document.querySelectorAll('#cardList > div');
+                if (cardElements[index]) {
+                    cardElements[index].scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        }
+
+        // 保存设置到localStorage
+        function saveSettings() {
+            const settings = {
+                mainTitle: document.getElementById('mainTitle').value,
+                dateInfo: document.getElementById('dateInfo').value,
+                cards: cards
+            };
+            
+            localStorage.setItem('informationCardSettings', JSON.stringify(settings));
+            
+            // 更新预览
+            document.getElementById('previewTitle').textContent = settings.mainTitle;
+            document.getElementById('previewDate').textContent = settings.dateInfo;
+            renderCards();
+            
+            alert('设置已保存！');
+        }
+
+        // 从localStorage加载设置
+        function loadSettings() {
+            const saved = localStorage.getItem('informationCardSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                document.getElementById('mainTitle').value = settings.mainTitle || '🚀 AI 每日简报';
+                document.getElementById('dateInfo').value = settings.dateInfo || '🗓️ 2025年9月30日 | 星期二';
+                cards = settings.cards || [];
+                
+                // 更新预览
+                document.getElementById('previewTitle').textContent = settings.mainTitle || '🚀 AI 每日简报';
+                document.getElementById('previewDate').textContent = settings.dateInfo || '🗓️ 2025年9月30日 | 星期二';
+            } else {
+                // 加载默认设置
+                loadDefaultSettings();
+            }
+            
+            renderCardSettings();
+        }
+
+        // 加载默认设置
+        function loadDefaultSettings() {
+            cards = [
+                {
+                    id: 1,
+                    icon: '🧠',
+                    title: 'Transformer模型新突破：推理速度提升40%',
+                    summary: '某知名实验室发布了名为"轻舟"的新型Transformer架构，通过引入动态稀疏门控机制，在保持与GPT-4相似精度的前提下，大幅优化了模型推理延迟，使其在移动端部署成为可能，预示着个人AI助理将迎来性能飞跃。',
+                    source: '#深度学习 #硬件加速',
+                    link: '#'
+                },
+                {
+                    id: 2,
+                    icon: '🤖',
+                    title: 'AI客服渗透率创新高：服务业自动化加速',
+                    summary: '最新行业报告显示，全球客户服务领域AI自动化工具（聊天机器人、语音助手）的渗透率已达65%。SaaS巨头开始集成多模态AI能力，旨在提供更加人性化和情境化的交互体验。',
+                    source: '华尔街日报',
+                    link: '#'
+                },
+                {
+                    id: 3,
+                    icon: '⚖️',
+                    title: '欧盟《AI法案》最终版本通过，强调数据透明度',
+                    summary: '欧盟议会正式批准了里程碑式的《AI法案》，对高风险AI应用设置了严格的监管框架。该法案着重强调了AI模型的训练数据透明度、可解释性以及对用户隐私的保护。',
+                    source: '#AI监管 #政策解读',
+                    link: '#'
+                },
+                {
+                    id: 4,
+                    icon: '🎨',
+                    title: '生成式模型跨界合作：AI辅助小说创作受追捧',
+                    summary: '多家出版公司宣布将引入AI工具，协助作家完成初步的大纲构建和场景描述。这种人机协作模式正在改变内容创作的流程，提高了初期产出效率。',
+                    source: '极客公园',
+                    link: '#'
+                }
+            ];
+            
+            document.getElementById('mainTitle').value = '🚀 AI 每日简报';
+            document.getElementById('dateInfo').value = '🗓️ 2025年9月30日 | 星期二';
+            
+            // 更新预览
+            document.getElementById('previewTitle').textContent = '🚀 AI 每日简报';
+            document.getElementById('previewDate').textContent = '🗓️ 2025年9月30日 | 星期二';
+            
+            renderCardSettings();
+            renderCards();
+        }
+
+        // 导出设置
+        function exportSettings() {
+            const settings = {
+                mainTitle: document.getElementById('mainTitle').value,
+                dateInfo: document.getElementById('dateInfo').value,
+                cards: cards
+            };
+            
+            const dataStr = JSON.stringify(settings, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'information-card-settings.json';
+            link.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        // 导入设置
+        function importSettings() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const settings = JSON.parse(e.target.result);
+                            document.getElementById('mainTitle').value = settings.mainTitle || '🚀 AI 每日简报';
+                            document.getElementById('dateInfo').value = settings.dateInfo || '🗓️ 2025年9月30日 | 星期二';
+                            cards = settings.cards || [];
+                            
+                            // 更新预览
+                            document.getElementById('previewTitle').textContent = settings.mainTitle || '🚀 AI 每日简报';
+                            document.getElementById('previewDate').textContent = settings.dateInfo || '🗓️ 2025年9月30日 | 星期二';
+                            
+                            renderCardSettings();
+                            renderCards();
+                            alert('设置导入成功！');
+                        } catch (error) {
+                            alert('文件格式错误，请选择正确的JSON文件！');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+    </script>
+
+</body>
+</html>
